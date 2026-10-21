@@ -1,0 +1,551 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>ตารางเรียนของฉัน</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Prompt:wght@500;600;700&family=Sarabun:wght@400;500;600&display=swap">
+<style>
+  /* Layout: near-black page; status hero, add-form, then the week as a 7-column grid on wide
+     screens (stacked on phones). A day card turns its weekday color once it has classes.
+     Type: Prompt for headings and numbers, Sarabun for reading. */
+  :root {
+    color-scheme: dark;
+    --bg: #060709;
+    --surface: #0f1115;
+    --surface-2: #1b1e24;
+    --ink: #f1f2f5;
+    --muted: #9ba1ad;
+    --line: #242830;
+    --accent: #f1f2f5;
+    --accent-ink: #08090b;
+    --accent-soft: #1b1e24;
+    --off: #f2c46d;
+    --off-soft: #2b2310;
+    --danger: #ff8d8d;
+    --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 28px rgba(0, 0, 0, 0.35);
+    --font-display: "Prompt", "Sarabun", system-ui, sans-serif;
+    --font-body: "Sarabun", system-ui, sans-serif;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--font-body);
+    font-size: 16px;
+    line-height: 1.55;
+    padding-block: 20px 48px;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+  }
+  .wrap { max-width: 1080px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+  h1, h2, h3 { font-family: var(--font-display); font-weight: 600; margin: 0; text-wrap: balance; line-height: 1.25; }
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.15rem; }
+  h3 { font-size: 1rem; }
+  p { margin: 0; }
+  button, input { font: inherit; color: inherit; }
+  :focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+  .top { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
+  .top .sub { color: var(--muted); font-size: 0.95rem; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; min-width: 0; box-shadow: var(--shadow); }
+
+  /* hero */
+  .hero {
+    --dh: 215;
+    --hero-ink: #f7f8fa;
+    --hero-dim: hsl(var(--dh) 70% 76%);
+    --hero-track: rgba(255, 255, 255, 0.14);
+    --hero-fill: hsl(var(--dh) 85% 62%);
+    background: #2b2e35; color: var(--hero-ink); border: 1px solid #3d414a;
+    border-radius: 18px; padding: 22px 22px 20px;
+    display: grid; gap: 14px 28px; grid-template-columns: 1fr; box-shadow: var(--shadow);
+  }
+  .hero.off { --hero-fill: #f2c46d; }
+  .hero .when { font-family: var(--font-display); }
+  .clock { font-weight: 700; font-size: 3.6rem; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+  .dateline { color: var(--hero-dim); margin-top: 6px; font-size: 1rem; }
+  .hero .live { display: flex; flex-direction: column; gap: 10px; min-width: 0; align-self: center; }
+  .tag { display: inline-block; width: fit-content; padding: 2px 12px; border-radius: 999px; font-size: 0.85rem; font-weight: 600; background: var(--hero-track); color: var(--hero-ink); }
+  .live-title { font-family: var(--font-display); font-weight: 600; font-size: 1.35rem; line-height: 1.3; overflow-wrap: anywhere; }
+  .live-meta { color: var(--hero-dim); }
+  .bar { height: 8px; border-radius: 999px; background: var(--hero-track); overflow: hidden; }
+  .bar > i { display: block; height: 100%; width: 0; background: var(--hero-fill); border-radius: 999px; }
+  .next { padding-top: 10px; border-top: 1px solid var(--hero-track); color: var(--hero-dim); }
+  .next b { color: var(--hero-ink); font-weight: 600; }
+  @media (min-width: 760px) { .hero { grid-template-columns: auto 1fr; padding: 26px 30px; } .clock { font-size: 4.6rem; } }
+
+  /* form */
+  .form-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; }
+  form { display: grid; gap: 16px 24px; margin-top: 14px; grid-template-columns: 1fr; }
+  @media (min-width: 760px) { form { grid-template-columns: 1.2fr 1fr; } .span2 { grid-column: 1 / -1; } }
+  .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  label, .label { font-size: 0.9rem; color: var(--muted); font-weight: 500; }
+  input[type="text"], input[type="time"] {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%; min-width: 0;
+  }
+  .times { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    width: 46px; height: 46px; border-radius: 50%; border: 1px solid var(--line);
+    background: var(--bg); cursor: pointer; font-weight: 600; font-family: var(--font-display); font-size: 0.95rem;
+  }
+  .chip[aria-pressed="true"] { background: hsl(var(--dh) 75% 62%); color: #0a0a0a; border-color: hsl(var(--dh) 75% 62%); }
+  .chip[disabled] { opacity: 0.4; cursor: not-allowed; text-decoration: line-through; }
+  .quick { display: flex; flex-wrap: wrap; gap: 4px 16px; margin-top: 2px; }
+  .link { background: none; border: none; padding: 2px 0; color: var(--accent); cursor: pointer; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
+  .btn { background: var(--accent); color: var(--accent-ink); border: none; border-radius: 10px; padding: 12px 22px; font-weight: 600; font-family: var(--font-display); cursor: pointer; }
+  .btn:hover { filter: brightness(1.08); }
+  .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 16px; }
+  .msg { min-height: 1.5em; font-size: 0.95rem; flex: 1 1 220px; }
+  .msg.err { color: var(--danger); font-weight: 700; }
+  .msg.ok { color: var(--accent); }
+
+  .banner {
+    display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px;
+    background: var(--accent-soft); color: var(--ink); border-radius: 12px; padding: 10px 16px; font-size: 0.92rem;
+  }
+
+  /* week */
+  .week-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin-bottom: 12px; }
+  .week-head .sub { color: var(--muted); font-size: 0.92rem; }
+  .week { display: grid; grid-template-columns: 1fr; gap: 12px; }
+  @media (min-width: 900px) { .week { grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 10px; } }
+  .day {
+    background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px;
+    min-width: 0; display: flex; flex-direction: column; gap: 10px; box-shadow: var(--shadow);
+  }
+  .day.today { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+  .day.off { background: repeating-linear-gradient(135deg, var(--surface) 0 9px, var(--off-soft) 9px 10px); }
+  .day-head { display: flex; align-items: center; gap: 10px; }
+  .dow {
+    flex: none; width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--surface-2); font-family: var(--font-display); font-weight: 600; font-size: 0.9rem;
+  }
+  .day.today .dow { background: var(--accent); color: var(--accent-ink); }
+  .day.off .dow { background: var(--off-soft); color: var(--off); }
+  /* วันที่มีวิชา เปลี่ยนเป็นสีประจำวัน */
+  .day.has { background: hsl(var(--dh) 52% 16%); border-color: hsl(var(--dh) 55% 36%); }
+  .day.has .dow { background: hsl(var(--dh) 75% 62%); color: #0a0a0a; }
+  .day.has .hours { color: hsl(var(--dh) 45% 80%); }
+  .dname { min-width: 0; line-height: 1.25; }
+  .dname h3 { font-size: 0.98rem; }
+  .hours { color: var(--muted); font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+  .hours.offtxt { color: var(--off); font-weight: 600; }
+  ul { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+  .subj {
+    position: relative; padding: 8px 30px 9px 11px; border-radius: 10px; min-width: 0;
+    background: hsl(var(--dh) 50% 27%); color: hsl(var(--dh) 100% 95%);
+    border: 1px solid hsl(var(--dh) 50% 40%);
+  }
+  .subj .t { display: block; font-size: 0.8rem; font-weight: 600; font-variant-numeric: tabular-nums; opacity: 0.85; }
+  .subj .n { display: block; font-weight: 600; overflow-wrap: anywhere; line-height: 1.3; }
+  .subj .x { position: absolute; top: 4px; right: 4px; background: none; border: none; cursor: pointer; font-size: 1.1rem; line-height: 1; padding: 3px 7px; border-radius: 6px; opacity: 0.6; color: inherit; }
+  .subj .x:hover { opacity: 1; background: rgba(255, 255, 255, 0.18); }
+  .empty { color: var(--muted); font-size: 0.9rem; padding: 2px 2px 6px; }
+  .dayoff { margin-top: auto; background: none; border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: 0.8rem; cursor: pointer; color: var(--muted); }
+  .dayoff:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* วันหยุดราชการ */
+  .hol { font-size: 0.95rem; color: #f2c46d; font-weight: 500; overflow-wrap: anywhere; }
+  .hol:empty { display: none; }
+  .date { display: block; font-size: 0.82rem; color: var(--muted); }
+  .day.has .date { color: hsl(var(--dh) 45% 80%); }
+  .day.holiday { border-style: dashed; border-color: var(--off); }
+  .hbadge { background: var(--off-soft); color: var(--off); border-radius: 8px; padding: 4px 9px; font-size: 0.82rem; font-weight: 600; overflow-wrap: anywhere; }
+  .hrow { display: grid; grid-template-columns: 88px 1fr auto; align-items: center; gap: 4px 12px; padding: 9px 12px; background: var(--surface-2); border-radius: 10px; }
+  .hrow .hd { font-family: var(--font-display); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .hrow .hn { min-width: 0; overflow-wrap: anywhere; }
+  .hrow .hl { color: var(--muted); font-size: 0.9rem; white-space: nowrap; }
+  @media (max-width: 480px) { .hrow { grid-template-columns: 1fr auto; } .hrow .hn { grid-column: 1 / -1; order: 3; } }
+
+  @media (prefers-reduced-motion: no-preference) {
+    .btn, .chip, .dayoff { transition: background 0.15s, border-color 0.15s, color 0.15s; }
+    .bar > i { transition: width 0.6s ease; }
+  }
+</style>
+
+<main class="wrap">
+  <header class="top">
+    <h1>ตารางเรียนของฉัน</h1>
+    <p class="sub">ลงวิชาได้หลายวัน ตั้งวันหยุด และดูว่าตอนนี้เรียนอะไรอยู่</p>
+  </header>
+
+  <section class="hero" id="hero" aria-live="polite">
+    <div class="when">
+      <div class="clock" id="clock">--:--</div>
+      <div class="dateline" id="dateline"></div>
+    </div>
+    <div class="live">
+      <span class="tag" id="tag"></span>
+      <div class="live-title" id="live-title"></div>
+      <div class="live-meta" id="live-meta"></div>
+      <div class="bar" id="bar" hidden><i id="bar-fill"></i></div>
+      <div class="next" id="next"></div>
+      <div class="hol" id="hol"></div>
+    </div>
+  </section>
+
+  <div class="banner" id="sample-banner" hidden>
+    <span>ตอนนี้เป็นข้อมูลตัวอย่าง ลองเพิ่มวิชาของคุณหรือล้างตัวอย่างก่อนก็ได้</span>
+    <button type="button" class="link" id="clear-all">ล้างตัวอย่างทั้งหมด</button>
+  </div>
+
+  <section class="card">
+    <div class="form-head">
+      <h2>เพิ่มวิชา</h2>
+    </div>
+    <form id="add-form" novalidate>
+      <div class="field">
+        <label for="subject">ชื่อวิชา</label>
+        <input type="text" id="subject" autocomplete="off" placeholder="เช่น Python เบื้องต้น">
+      </div>
+      <div class="times">
+        <div class="field">
+          <label for="start">เวลาเริ่ม</label>
+          <input type="time" id="start" value="09:00">
+        </div>
+        <div class="field">
+          <label for="end">เวลาเลิก</label>
+          <input type="time" id="end" value="10:30">
+        </div>
+      </div>
+      <div class="field span2">
+        <span class="label" id="days-label">เลือกวันเรียน (เลือกได้หลายวัน)</span>
+        <div class="chips" id="chips" role="group" aria-labelledby="days-label"></div>
+        <div class="quick">
+          <button type="button" class="link" data-quick="weekdays">จันทร์–ศุกร์</button>
+          <button type="button" class="link" data-quick="all">ทุกวัน</button>
+          <button type="button" class="link" data-quick="none">ล้างที่เลือก</button>
+        </div>
+      </div>
+      <div class="actions span2">
+        <button type="submit" class="btn">เพิ่มวิชา</button>
+        <p class="msg" id="msg" role="status"></p>
+      </div>
+    </form>
+  </section>
+
+  <section>
+    <div class="week-head">
+      <h2>ตารางทั้งสัปดาห์</h2>
+      <span class="sub">กด "ตั้งเป็นวันหยุด" ที่การ์ดของวันนั้น</span>
+    </div>
+    <div class="week" id="week"></div>
+  </section>
+
+  <section class="card">
+    <div class="week-head">
+      <h2>วันหยุดราชการที่จะถึง</h2>
+      <span class="sub">ปี 2569 ตามรายการวันหยุดประจำปี</span>
+    </div>
+    <ul id="hol-list"></ul>
+  </section>
+</main>
+
+<script>
+  // ฟังก์ชันชื่อเดียวกับโปรแกรม Python (timetable.py)
+  var DAYS = ["จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์", "อาทิตย์"];
+  var SHORT = ["จ", "อ", "พ", "พฤ", "ศ", "ส", "อา"];
+  var MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+  var STORE_KEY = "my-timetable-v1";
+
+  var state = { timetable: [], daysOff: [], sample: false, nextId: 1 };
+  var selected = [];
+
+  function sampleData() {
+    return {
+      timetable: [
+        { id: 1, subject: "Python เบื้องต้น", day: 0, start: "09:00", end: "10:30" },
+        { id: 2, subject: "Python เบื้องต้น", day: 2, start: "09:00", end: "10:30" },
+        { id: 3, subject: "คณิตศาสตร์", day: 1, start: "13:00", end: "15:00" },
+        { id: 4, subject: "คณิตศาสตร์", day: 3, start: "13:00", end: "15:00" },
+        { id: 5, subject: "ภาษาอังกฤษ", day: 4, start: "10:00", end: "12:00" }
+      ],
+      daysOff: [5, 6], sample: true, nextId: 6
+    };
+  }
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORE_KEY);
+      if (raw) { var s = JSON.parse(raw); if (s && Array.isArray(s.timetable)) { state = s; return; } }
+    } catch (e) {}
+    state = sampleData();
+  }
+  function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+
+  function toMinutes(text) {
+    var m = /^(\d{1,2}):(\d{2})$/.exec(text || "");
+    if (!m) return null;
+    var h = +m[1], mi = +m[2];
+    return (h < 24 && mi < 60) ? h * 60 + mi : null;
+  }
+  function isOff(day) { return state.daysOff.indexOf(day) !== -1; }
+  function dayHours(day) {
+    var total = 0;
+    state.timetable.forEach(function (r) { if (r.day === day) total += toMinutes(r.end) - toMinutes(r.start); });
+    return total / 60;
+  }
+  // สีประจำวันแบบไทย: จันทร์เหลือง อังคารชมพู พุธเขียว พฤหัสส้ม ศุกร์ฟ้า เสาร์ม่วง อาทิตย์แดง
+  var DAYHUE = [48, 330, 140, 25, 205, 275, 355];
+  var MONTHS_S = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+
+  // วันหยุดราชการ พ.ศ. 2569 (ค.ศ. 2026) จากรายการวันหยุดประจำปีของกระทรวงการต่างประเทศ
+  // และ FlowAccount ยังไม่มีปี 2570 และถ้า ครม. ประกาศเพิ่มต้องมาเติมเอง
+  var HOLIDAYS = [
+    { d: "2026-01-01", n: "วันขึ้นปีใหม่" },
+    { d: "2026-01-02", n: "วันหยุดราชการเพิ่มเป็นกรณีพิเศษ" },
+    { d: "2026-03-03", n: "วันมาฆบูชา" },
+    { d: "2026-04-06", n: "วันจักรี" },
+    { d: "2026-04-13", n: "วันสงกรานต์" },
+    { d: "2026-04-14", n: "วันสงกรานต์" },
+    { d: "2026-04-15", n: "วันสงกรานต์" },
+    { d: "2026-05-04", n: "วันฉัตรมงคล" },
+    { d: "2026-05-11", n: "วันพืชมงคล" },
+    { d: "2026-05-31", n: "วันวิสาขบูชา" },
+    { d: "2026-06-01", n: "ชดเชยวันวิสาขบูชา" },
+    { d: "2026-06-03", n: "วันเฉลิมพระชนมพรรษาพระราชินี" },
+    { d: "2026-07-28", n: "วันเฉลิมพระชนมพรรษา ร.10" },
+    { d: "2026-07-29", n: "วันอาสาฬหบูชา" },
+    { d: "2026-07-30", n: "วันเข้าพรรษา" },
+    { d: "2026-08-12", n: "วันแม่แห่งชาติ" },
+    { d: "2026-10-13", n: "วันนวมินทรมหาราช" },
+    { d: "2026-10-23", n: "วันปิยมหาราช" },
+    { d: "2026-12-05", n: "วันพ่อแห่งชาติ" },
+    { d: "2026-12-07", n: "ชดเชยวันพ่อแห่งชาติ" },
+    { d: "2026-12-10", n: "วันรัฐธรรมนูญ" },
+    { d: "2026-12-31", n: "วันสิ้นปี" }
+  ];
+
+  function ymd(dt) { return dt.getFullYear() + "-" + pad(dt.getMonth() + 1) + "-" + pad(dt.getDate()); }
+  function holidayName(key) {
+    for (var i = 0; i < HOLIDAYS.length; i++) if (HOLIDAYS[i].d === key) return HOLIDAYS[i].n;
+    return null;
+  }
+  function daysUntil(key) {
+    var p = key.split("-");
+    var a = new Date(+p[0], +p[1] - 1, +p[2]);
+    var n = new Date();
+    var b = new Date(n.getFullYear(), n.getMonth(), n.getDate());
+    return Math.round((a - b) / 86400000);
+  }
+  function dateLabel(key) {
+    var p = key.split("-");
+    var dt = new Date(+p[0], +p[1] - 1, +p[2]);
+    return SHORT[(dt.getDay() + 6) % 7] + " " + dt.getDate() + " " + MONTHS_S[dt.getMonth()];
+  }
+  function upcomingHolidays(limit) {
+    var t = ymd(new Date());
+    return HOLIDAYS.filter(function (h) { return h.d >= t; }).slice(0, limit);
+  }
+
+  // บรรทัดวันหยุดราชการในแถบบน และรายการวันหยุดที่จะถึง
+  function renderHolidays() {
+    var list = upcomingHolidays(8);
+    var hol = document.getElementById("hol");
+    if (!list.length) {
+      hol.textContent = "ไม่มีวันหยุดราชการเหลือในข้อมูลที่ใส่ไว้ (มีถึงสิ้นปี 2569)";
+    } else if (daysUntil(list[0].d) === 0) {
+      hol.textContent = "วันนี้เป็นวันหยุดราชการ: " + list[0].n;
+    } else {
+      hol.textContent = "วันหยุดราชการถัดไป: " + list[0].n + " (" + dateLabel(list[0].d) + ") อีก " + daysUntil(list[0].d) + " วัน";
+    }
+    document.getElementById("hol-list").innerHTML = list.length ? list.map(function (h) {
+      var n = daysUntil(h.d);
+      return '<li class="hrow"><span class="hd">' + dateLabel(h.d) + '</span><span class="hn">' + esc(h.n) +
+        '</span><span class="hl">' + (n === 0 ? "วันนี้" : "อีก " + n + " วัน") + "</span></li>";
+    }).join("") : '<li class="empty">ไม่มีวันหยุดราชการเหลือในข้อมูลที่ใส่ไว้</li>';
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+  function pad(n) { return n < 10 ? "0" + n : "" + n; }
+
+  function say(text, kind) {
+    var el = document.getElementById("msg");
+    el.textContent = text;
+    el.className = "msg " + (kind || "");
+  }
+
+  // เพิ่มวิชาได้หลายวัน ข้ามวันที่เป็นวันหยุด
+  function addSubject() {
+    var subject = document.getElementById("subject").value.trim();
+    var start = document.getElementById("start").value;
+    var end = document.getElementById("end").value;
+    if (!subject) return say("กรอกชื่อวิชาก่อน", "err");
+    if (!selected.length) return say("เลือกวันเรียนอย่างน้อย 1 วัน", "err");
+    if (toMinutes(start) === null || toMinutes(end) === null) return say("ใส่เวลาเริ่มและเวลาเลิกให้ครบ", "err");
+    if (toMinutes(end) <= toMinutes(start)) return say("เวลาเลิกต้องมากกว่าเวลาเริ่ม", "err");
+
+    var added = [], skipped = [];
+    selected.slice().sort().forEach(function (day) {
+      if (isOff(day)) { skipped.push(DAYS[day]); return; }
+      state.timetable.push({ id: state.nextId++, subject: subject, day: day, start: start, end: end });
+      added.push(DAYS[day]);
+    });
+    if (!added.length) return say("ไม่ได้เพิ่มวิชา เพราะทุกวันที่เลือกเป็นวันหยุด", "err");
+    save(); render();
+    var text = "เพิ่ม " + subject + " แล้ว: " + added.join(", ");
+    if (skipped.length) text += " (ข้ามวันหยุด: " + skipped.join(", ") + ")";
+    say(text, "ok");
+    document.getElementById("subject").value = "";
+  }
+
+  function setDayOff(day) {
+    var i = state.daysOff.indexOf(day);
+    if (i !== -1) {
+      state.daysOff.splice(i, 1);
+      say("ยกเลิกวันหยุดวัน" + DAYS[day] + " แล้ว", "ok");
+    } else {
+      state.daysOff.push(day);
+      var before = state.timetable.length;
+      state.timetable = state.timetable.filter(function (r) { return r.day !== day; });
+      selected = selected.filter(function (d) { return d !== day; });
+      say("ตั้งวัน" + DAYS[day] + "เป็นวันหยุดแล้ว (ลบวิชาในวันนั้น " + (before - state.timetable.length) + " วิชา)", "ok");
+    }
+    save(); render();
+  }
+
+  function renderChips() {
+    var box = document.getElementById("chips");
+    box.innerHTML = DAYS.map(function (d, i) {
+      var on = selected.indexOf(i) !== -1;
+      return '<button type="button" class="chip" data-day="' + i + '" style="--dh:' + DAYHUE[i] + '" aria-pressed="' + on + '"' +
+        (isOff(i) ? ' disabled title="วันหยุด"' : "") + ' aria-label="' + d + '">' + SHORT[i] + "</button>";
+    }).join("");
+  }
+
+  function renderWeek() {
+    var now0 = new Date();
+    var today = (now0.getDay() + 6) % 7;
+    var mon = new Date(now0.getFullYear(), now0.getMonth(), now0.getDate() - today);
+    document.getElementById("week").innerHTML = DAYS.map(function (name, d) {
+      var off = isOff(d);
+      var dt = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + d);
+      var hn = holidayName(ymd(dt));
+      var rows = state.timetable.filter(function (r) { return r.day === d; })
+        .sort(function (a, b) { return toMinutes(a.start) - toMinutes(b.start); });
+      var body;
+      if (off) body = '<p class="empty">พักผ่อนได้เลย</p>';
+      else if (!rows.length) body = '<p class="empty">ว่าง</p>';
+      else body = "<ul>" + rows.map(function (r) {
+        return '<li class="subj"><span class="t">' + r.start + "–" + r.end +
+          '</span><span class="n">' + esc(r.subject) + '</span><button class="x" data-del="' + r.id +
+          '" aria-label="ลบวิชา ' + esc(r.subject) + '">×</button></li>';
+      }).join("") + "</ul>";
+      return '<section class="day' + (d === today ? " today" : "") + (off ? " off" : "") +
+        (!off && rows.length ? " has" : "") + (hn ? " holiday" : "") + '" style="--dh:' + DAYHUE[d] + '">' +
+        '<div class="day-head"><span class="dow">' + SHORT[d] + '</span><div class="dname"><h3>' + name + "</h3>" +
+        '<span class="date">' + dt.getDate() + " " + MONTHS_S[dt.getMonth()] + "</span>" +
+        (off ? '<span class="hours offtxt">วันหยุด</span>' : '<span class="hours">' + dayHours(d).toFixed(1) + " ชม.</span>") +
+        "</div></div>" + (hn ? '<span class="hbadge">วันหยุดราชการ: ' + esc(hn) + "</span>" : "") + body +
+        '<button class="dayoff" data-off="' + d + '">' + (off ? "ยกเลิกวันหยุด" : "ตั้งเป็นวันหยุด") + "</button></section>";
+    }).join("");
+  }
+
+  // บอกเวลาตอนนี้ วิชาที่กำลังเรียน และวิชาถัดไป
+  function renderStatus() {
+    var now = new Date();
+    var today = (now.getDay() + 6) % 7;
+    var mins = now.getHours() * 60 + now.getMinutes();
+    document.getElementById("clock").textContent = pad(now.getHours()) + ":" + pad(now.getMinutes());
+    document.getElementById("dateline").textContent = "วัน" + DAYS[today] + "ที่ " + now.getDate() + " " + MONTHS[now.getMonth()];
+
+    var tag = document.getElementById("tag");
+    var title = document.getElementById("live-title");
+    var meta = document.getElementById("live-meta");
+    var bar = document.getElementById("bar");
+    var fill = document.getElementById("bar-fill");
+    var next = document.getElementById("next");
+    var hero = document.getElementById("hero");
+    hero.style.setProperty("--dh", DAYHUE[today]);
+    hero.classList.toggle("off", isOff(today));
+    bar.hidden = true;
+
+    if (isOff(today)) {
+      tag.textContent = "วันหยุด";
+      title.textContent = "วันนี้เป็นวันหยุด พักผ่อนได้เลย!";
+      meta.textContent = "";
+      next.textContent = "";
+      return;
+    }
+    var todays = state.timetable.filter(function (r) { return r.day === today; })
+      .sort(function (a, b) { return toMinutes(a.start) - toMinutes(b.start); });
+    var current = null, upcoming = null;
+    todays.forEach(function (r) {
+      var s = toMinutes(r.start), e = toMinutes(r.end);
+      if (s <= mins && mins < e) current = r;
+      else if (s > mins && !upcoming) upcoming = r;
+    });
+    if (current) {
+      var s0 = toMinutes(current.start), e0 = toMinutes(current.end);
+      tag.textContent = "กำลังเรียน";
+      title.textContent = current.subject;
+      meta.textContent = current.start + "–" + current.end + " · เหลืออีก " + (e0 - mins) + " นาที";
+      bar.hidden = false;
+      fill.style.width = Math.round((mins - s0) / (e0 - s0) * 100) + "%";
+    } else {
+      tag.textContent = "ว่าง";
+      title.textContent = "ตอนนี้ไม่มีเรียน";
+      meta.textContent = "";
+    }
+    next.innerHTML = upcoming
+      ? "วิชาถัดไป <b>" + esc(upcoming.subject) + "</b> เวลา " + upcoming.start + " (อีก " + (toMinutes(upcoming.start) - mins) + " นาที)"
+      : "วันนี้ไม่มีวิชาเหลือแล้ว";
+  }
+
+  function render() {
+    renderChips();
+    renderWeek();
+    renderStatus();
+    renderHolidays();
+    document.getElementById("sample-banner").hidden = !state.sample;
+  }
+
+  document.getElementById("add-form").addEventListener("submit", function (e) { e.preventDefault(); addSubject(); });
+
+  document.getElementById("chips").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-day]");
+    if (!b || b.disabled) return;
+    var d = +b.getAttribute("data-day");
+    var i = selected.indexOf(d);
+    if (i === -1) selected.push(d); else selected.splice(i, 1);
+    renderChips();
+  });
+
+  document.querySelector(".quick").addEventListener("click", function (e) {
+    var b = e.target.closest("[data-quick]");
+    if (!b) return;
+    var q = b.getAttribute("data-quick");
+    var pool = q === "weekdays" ? [0, 1, 2, 3, 4] : q === "all" ? [0, 1, 2, 3, 4, 5, 6] : [];
+    selected = pool.filter(function (d) { return !isOff(d); });
+    renderChips();
+  });
+
+  document.getElementById("week").addEventListener("click", function (e) {
+    var off = e.target.closest("[data-off]");
+    var del = e.target.closest("[data-del]");
+    if (off) setDayOff(+off.getAttribute("data-off"));
+    if (del) {
+      var id = +del.getAttribute("data-del");
+      state.timetable = state.timetable.filter(function (r) { return r.id !== id; });
+      save(); render(); say("ลบวิชาแล้ว", "ok");
+    }
+  });
+
+  document.getElementById("clear-all").addEventListener("click", function () {
+    state = { timetable: [], daysOff: [], sample: false, nextId: 1 };
+    selected = [];
+    save(); render(); say("ล้างข้อมูลตัวอย่างแล้ว เริ่มลงตารางของคุณได้เลย", "ok");
+  });
+
+  load();
+  render();
+  setInterval(function () { renderStatus(); renderHolidays(); }, 20000);
+</script>
+
+</body></html>
