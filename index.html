@@ -21,12 +21,16 @@
     --off: #f2c46d;
     --off-soft: #2b2310;
     --danger: #ff8d8d;
+    --ok-bg: #123824;
+    --ok-line: #2f9a5f;
+    --ok-ink: #c4f5d8;
     --shadow: 0 1px 2px rgba(0, 0, 0, 0.5), 0 10px 28px rgba(0, 0, 0, 0.35);
     --font-display: "Prompt", "Sarabun", system-ui, sans-serif;
     --font-body: "Sarabun", system-ui, sans-serif;
   }
 
   * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
   body {
     background: var(--bg);
     color: var(--ink);
@@ -82,7 +86,7 @@
   @media (min-width: 760px) { form { grid-template-columns: 1.2fr 1fr; } .span2 { grid-column: 1 / -1; } }
   .field { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
   label, .label { font-size: 0.9rem; color: var(--muted); font-weight: 500; }
-  input[type="text"], input[type="time"] {
+  input[type="text"], input[type="time"], input[type="password"] {
     background: var(--bg); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; width: 100%; min-width: 0;
   }
   .times { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
@@ -147,6 +151,38 @@
   .dayoff { margin-top: auto; background: none; border: 1px solid var(--line); border-radius: 8px; padding: 5px 8px; font-size: 0.8rem; cursor: pointer; color: var(--muted); }
   .dayoff:hover { border-color: var(--accent); color: var(--accent); }
 
+  /* login */
+  #app { display: flex; flex-direction: column; gap: 18px; }
+  .auth { max-width: 440px; width: 100%; margin: 24px auto 0; display: flex; flex-direction: column; gap: 14px; }
+  .auth form { display: flex; flex-direction: column; gap: 14px; margin-top: 0; }
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; background: var(--surface-2); padding: 4px; border-radius: 12px; }
+  .tab { background: none; border: none; border-radius: 9px; padding: 9px 10px; font-family: var(--font-display); font-weight: 600; cursor: pointer; color: var(--muted); }
+  .tab[aria-selected="true"] { background: var(--ink); color: var(--bg); }
+  .hint { color: var(--muted); font-size: 0.85rem; }
+  .notice { display: flex; gap: 10px; align-items: flex-start; background: var(--ok-bg); color: var(--ok-ink); border: 1px solid var(--ok-line); border-radius: 12px; padding: 12px 14px; font-weight: 500; line-height: 1.45; }
+  .overlay { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; background: rgba(0, 0, 0, 0.75);
+    padding-block: max(16px, env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-bottom, 0px));
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+  .dialog { background: var(--surface); border: 1px solid var(--ok-line); border-radius: 18px; padding: 26px 22px 22px; width: 100%; max-width: 380px;
+    display: flex; flex-direction: column; align-items: center; gap: 10px; text-align: center; box-shadow: var(--shadow); }
+  .dialog svg { width: 60px; height: 60px; color: var(--ok-line); }
+  .dialog h2 { font-size: 1.35rem; }
+  .dialog p { color: var(--muted); overflow-wrap: anywhere; }
+  .dialog p b { color: var(--ink); }
+  .dialog .btn { width: 100%; margin-top: 8px; }
+  .notice svg { flex: none; width: 22px; height: 22px; margin-top: 1px; }
+  .notice b { display: block; font-family: var(--font-display); font-weight: 600; font-size: 1.02rem; }
+  .auth .msg { flex: none; }
+  .auth .msg:empty { display: none; }
+  .auth .msg.err { background: #3b1518; border: 1px solid #c2484d; color: #ffd6d6; border-radius: 10px; padding: 10px 12px; font-weight: 600; font-size: 1rem; }
+  .auth .msg.ok { background: var(--ok-bg); border: 1px solid var(--ok-line); color: var(--ok-ink); border-radius: 10px; padding: 10px 12px; font-weight: 600; }
+  input[aria-invalid="true"] { border-color: #e5666b; box-shadow: 0 0 0 2px rgba(229, 102, 107, 0.45); }
+  .btn[disabled] { opacity: 0.5; cursor: not-allowed; }
+  .userbar { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .userbar .who { font-weight: 600; overflow-wrap: anywhere; }
+  .ghost { background: none; border: 1px solid var(--line); border-radius: 8px; padding: 5px 12px; font-size: 0.85rem; cursor: pointer; }
+  .ghost:hover { border-color: var(--ink); }
+
   /* วันหยุดราชการ */
   .hol { font-size: 0.95rem; color: #f2c46d; font-weight: 500; overflow-wrap: anywhere; }
   .hol:empty { display: none; }
@@ -170,7 +206,53 @@
   <header class="top">
     <h1>ตารางเรียนของฉัน</h1>
     <p class="sub">ลงวิชาได้หลายวัน ตั้งวันหยุด และดูว่าตอนนี้เรียนอะไรอยู่</p>
+    <div class="userbar" id="userbar" hidden>
+      <span class="who" id="who"></span>
+      <button type="button" class="ghost" id="logout">ออกจากระบบ</button>
+    </div>
   </header>
+
+  <section class="card auth" id="auth">
+    <div class="notice" id="au-notice" role="status" hidden>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-7"/></svg>
+      <div><b>สร้าง ID สำเร็จแล้ว</b><span id="au-notice-text"></span></div>
+    </div>
+    <h2 id="auth-title">เข้าสู่ระบบ</h2>
+    <div class="tabs" role="tablist" aria-label="เข้าสู่ระบบหรือสร้าง ID">
+      <button type="button" class="tab" role="tab" id="tab-login" data-mode="login" aria-selected="true">เข้าสู่ระบบ</button>
+      <button type="button" class="tab" role="tab" id="tab-register" data-mode="register" aria-selected="false">สร้าง ID ใหม่</button>
+    </div>
+    <form id="auth-form" novalidate>
+      <div class="field">
+        <label for="au-user">ID</label>
+        <input type="text" id="au-user" autocomplete="username" autocapitalize="none" spellcheck="false">
+        <span class="hint" id="au-user-hint" hidden>3-20 ตัว ใช้ตัวอักษร ตัวเลข หรือ _ เท่านั้น</span>
+      </div>
+      <div class="field">
+        <label for="au-pass">รหัสผ่าน</label>
+        <input type="password" id="au-pass" autocomplete="current-password">
+        <span class="hint" id="au-pass-hint" hidden>อย่างน้อย 6 ตัว</span>
+      </div>
+      <div class="field" id="au-confirm-wrap" hidden>
+        <label for="au-pass2">ยืนยันรหัสผ่านอีกครั้ง</label>
+        <input type="password" id="au-pass2" autocomplete="new-password">
+      </div>
+      <p class="msg" id="au-msg" role="alert"></p>
+      <button type="submit" class="btn" id="au-submit">เข้าสู่ระบบ</button>
+    </form>
+    <p class="hint">ข้อมูลบัญชีและตารางเรียนเก็บในเบราว์เซอร์เครื่องนี้เท่านั้น ไม่ได้ส่งไปที่อื่น (เวอร์ชันหน้าเว็บ 6 พ.ย. 15:25)</p>
+  </section>
+
+  <div class="overlay" id="done" role="dialog" aria-modal="true" aria-labelledby="done-title" hidden>
+    <div class="dialog">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M7.5 12.5l3 3 6-7"/></svg>
+      <h2 id="done-title">สร้าง ID สำเร็จแล้ว</h2>
+      <p>ID ของคุณคือ <b id="done-id"></b><br>ใส่รหัสผ่านที่ตั้งไว้เพื่อเข้าสู่ระบบได้เลย</p>
+      <button type="button" class="btn" id="done-ok">ไปเข้าสู่ระบบ</button>
+    </div>
+  </div>
+
+  <div id="app" hidden>
 
   <section class="hero" id="hero" aria-live="polite">
     <div class="when">
@@ -242,6 +324,7 @@
     </div>
     <ul id="hol-list"></ul>
   </section>
+  </div>
 </main>
 
 <script>
@@ -267,14 +350,197 @@
     };
   }
 
-  function load() {
+  var USERS_KEY = "my-timetable-users-v2";
+  var SESSION_KEY = "my-timetable-session-v2";
+  var memUsers = {};
+  var currentUser = null;
+  var authMode = "login";
+  var failCount = 0;
+  var lockUntil = 0;
+
+  function emptyState() { return { timetable: [], daysOff: [], sample: false, nextId: 1 }; }
+
+  function readUsers() {
     try {
-      var raw = localStorage.getItem(STORE_KEY);
-      if (raw) { var s = JSON.parse(raw); if (s && Array.isArray(s.timetable)) { state = s; return; } }
+      var raw = localStorage.getItem(USERS_KEY);
+      if (raw) { var u = JSON.parse(raw); if (u && typeof u === "object") { memUsers = u; return u; } }
     } catch (e) {}
-    state = sampleData();
+    return memUsers;
   }
-  function save() { try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch (e) {} }
+  function writeUsers(u) {
+    memUsers = u;
+    try { localStorage.setItem(USERS_KEY, JSON.stringify(u)); } catch (e) {}
+  }
+  // บันทึกตารางของผู้ใช้ที่ล็อกอินอยู่
+  function save() {
+    if (!currentUser) return;
+    var users = readUsers();
+    if (users[currentUser]) { users[currentUser].state = state; writeUsers(users); }
+  }
+
+  function toHex(buf) {
+    return Array.prototype.map.call(new Uint8Array(buf), function (b) { return ("0" + b.toString(16)).slice(-2); }).join("");
+  }
+  function newSalt() {
+    var a = new Uint8Array(8);
+    if (window.crypto && crypto.getRandomValues) crypto.getRandomValues(a);
+    else for (var i = 0; i < a.length; i++) a[i] = Math.floor(Math.random() * 256);
+    return toHex(a);
+  }
+  // แปลงรหัสผ่านเป็นค่าแฮช (ไม่เก็บรหัสผ่านจริง)
+  function hashPassword(pw, salt) {
+    var text = salt + pw;
+    if (window.crypto && crypto.subtle && window.TextEncoder) {
+      return crypto.subtle.digest("SHA-256", new TextEncoder().encode(text)).then(toHex);
+    }
+    var h = 5381;
+    for (var i = 0; i < text.length; i++) h = ((h * 33) ^ text.charCodeAt(i)) >>> 0;
+    return Promise.resolve("x" + h.toString(16));
+  }
+  function validUsername(name) { return /^[\p{L}\p{N}_]{3,20}$/u.test(name); }
+
+  function clearInvalid() {
+    ["au-user", "au-pass", "au-pass2"].forEach(function (id) { document.getElementById(id).removeAttribute("aria-invalid"); });
+  }
+  function authSay(text, kind) {
+    var el = document.getElementById("au-msg");
+    el.textContent = text;
+    el.className = "msg " + (kind || "");
+    if (kind !== "err") clearInvalid();
+  }
+  // แสดงข้อผิดพลาดเป็นกล่องสีแดงเหนือปุ่ม ขีดกรอบแดงช่องที่ผิด และพาเคอร์เซอร์ไปช่องนั้น
+  function authBad(text, ids, focusId) {
+    authSay(text, "err");
+    ids.forEach(function (id) { document.getElementById(id).setAttribute("aria-invalid", "true"); });
+    var f = document.getElementById(focusId);
+    f.focus();
+    if (f.scrollIntoView) f.scrollIntoView({ block: "center" });
+  }
+
+  function setAuthMode(mode) {
+    authMode = mode;
+    var reg = mode === "register";
+    document.getElementById("tab-login").setAttribute("aria-selected", String(!reg));
+    document.getElementById("tab-register").setAttribute("aria-selected", String(reg));
+    document.getElementById("auth-title").textContent = reg ? "สร้าง ID ใหม่" : "เข้าสู่ระบบ";
+    document.getElementById("au-confirm-wrap").hidden = !reg;
+    document.getElementById("au-user-hint").hidden = !reg;
+    document.getElementById("au-pass-hint").hidden = !reg;
+    document.getElementById("au-submit").textContent = reg ? "สร้าง ID" : "เข้าสู่ระบบ";
+    document.getElementById("au-pass").setAttribute("autocomplete", reg ? "new-password" : "current-password");
+    document.getElementById("au-pass").value = "";
+    document.getElementById("au-pass2").value = "";
+    authSay("", "");
+    document.getElementById("au-notice").hidden = true;
+  }
+
+  function closeDone() {
+    var d = document.getElementById("done");
+    if (d.hidden) return;
+    d.hidden = true;
+    document.getElementById("au-pass").focus();
+  }
+
+  function showApp() {
+    document.getElementById("auth").hidden = true;
+    document.getElementById("app").hidden = false;
+    document.getElementById("userbar").hidden = false;
+    document.getElementById("who").textContent = "ผู้ใช้: " + currentUser;
+  }
+  function showAuth() {
+    document.getElementById("auth").hidden = false;
+    document.getElementById("app").hidden = true;
+    document.getElementById("userbar").hidden = true;
+  }
+
+  // เข้าสู่ระบบสำเร็จ: โหลดตารางของผู้ใช้คนนี้
+  function enter(name) {
+    var users = readUsers();
+    currentUser = name;
+    state = users[name].state || emptyState();
+    if (!Array.isArray(state.timetable)) state = emptyState();
+    selected = [];
+    try { sessionStorage.setItem(SESSION_KEY, name); } catch (e) {}
+    showApp();
+    render();
+    say("", "");
+  }
+
+  function logout() {
+    save();
+    currentUser = null;
+    state = emptyState();
+    try { sessionStorage.removeItem(SESSION_KEY); } catch (e) {}
+    document.getElementById("au-user").value = "";
+    setAuthMode("login");
+    showAuth();
+  }
+
+  function submitAuth() {
+    var name = document.getElementById("au-user").value.trim();
+    var pw = document.getElementById("au-pass").value;
+    var btn = document.getElementById("au-submit");
+    var users = readUsers();
+
+    if (authMode === "register") {
+      var pw2 = document.getElementById("au-pass2").value;
+      if (!validUsername(name)) return authBad("ID ไม่ถูกต้อง ต้องยาว 3-20 ตัว ใช้ตัวอักษร ตัวเลข หรือ _ เท่านั้น", ["au-user"], "au-user");
+      if (users[name]) return authBad("ID นี้มีคนใช้แล้ว โปรดตั้งชื่ออื่น", ["au-user"], "au-user");
+      if (pw.length < 6) return authBad("รหัสผ่านสั้นเกินไป ต้องมีอย่างน้อย 6 ตัว", ["au-pass"], "au-pass");
+      if (pw !== pw2) return authBad("รหัสผ่านไม่ตรงกัน โปรดใส่ให้ตรงกัน", ["au-pass", "au-pass2"], "au-pass2");
+      btn.disabled = true;
+      var salt = newSalt();
+      hashPassword(pw, salt).then(function (hash) {
+        var fresh = readUsers();
+        fresh[name] = { salt: salt, hash: hash, state: emptyState() };
+        writeUsers(fresh);
+        btn.disabled = false;
+        setAuthMode("login");
+        document.getElementById("au-user").value = name;
+        document.getElementById("au-notice-text").textContent = "ID ของคุณคือ " + name + " ใส่รหัสผ่านที่ตั้งไว้ด้านล่างเพื่อเข้าสู่ระบบได้เลย";
+        var note = document.getElementById("au-notice");
+        note.hidden = false;
+        document.getElementById("done-id").textContent = name;
+        document.getElementById("done").hidden = false;
+        document.getElementById("done-ok").focus();
+      });
+      return;
+    }
+
+    document.getElementById("au-notice").hidden = true;
+    // เข้าสู่ระบบ: ผิดครบ 3 ครั้งรอ 10 วินาที
+    var wait = Math.ceil((lockUntil - Date.now()) / 1000);
+    if (wait > 0) return authBad("ลองผิดครบ 3 ครั้งแล้ว รออีก " + wait + " วินาที", [], "au-pass");
+    if (!name || !pw) return authBad("กรอก ID และรหัสผ่านก่อน", [!name ? "au-user" : "au-pass"], !name ? "au-user" : "au-pass");
+    var user = users[name];
+    btn.disabled = true;
+    hashPassword(pw, user ? user.salt : "none").then(function (hash) {
+      btn.disabled = false;
+      if (user && user.hash === hash) {
+        failCount = 0;
+        document.getElementById("au-pass").value = "";
+        authSay("", "");
+        enter(name);
+        return;
+      }
+      failCount++;
+      if (failCount >= 3) {
+        failCount = 0;
+        lockUntil = Date.now() + 10000;
+        authBad("ID หรือรหัสผ่านไม่ถูกต้อง ครบ 3 ครั้งแล้ว รอ 10 วินาทีแล้วลองใหม่", ["au-user", "au-pass"], "au-pass");
+      } else {
+        authBad("ID หรือรหัสผ่านไม่ถูกต้อง โปรดลองใหม่ (เหลืออีก " + (3 - failCount) + " ครั้ง)", ["au-user", "au-pass"], "au-pass");
+      }
+    });
+  }
+
+  function boot() {
+    setAuthMode("login");
+    showAuth();
+    var saved = null;
+    try { saved = sessionStorage.getItem(SESSION_KEY); } catch (e) {}
+    if (saved && readUsers()[saved]) enter(saved);
+  }
 
   function toMinutes(text) {
     var m = /^(\d{1,2}):(\d{2})$/.exec(text || "");
@@ -543,8 +809,18 @@
     save(); render(); say("ล้างข้อมูลตัวอย่างแล้ว เริ่มลงตารางของคุณได้เลย", "ok");
   });
 
-  load();
-  render();
+  document.getElementById("auth-form").addEventListener("submit", function (e) { e.preventDefault(); submitAuth(); });
+  document.getElementById("tab-login").addEventListener("click", function () { setAuthMode("login"); });
+  document.getElementById("tab-register").addEventListener("click", function () { setAuthMode("register"); });
+  document.getElementById("logout").addEventListener("click", logout);
+
+  ["au-user", "au-pass", "au-pass2"].forEach(function (id) {
+    document.getElementById(id).addEventListener("input", function () { this.removeAttribute("aria-invalid"); });
+  });
+  document.getElementById("done-ok").addEventListener("click", closeDone);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeDone(); });
+
+  boot();
   setInterval(function () { renderStatus(); renderHolidays(); }, 20000);
 </script>
 
